@@ -31,25 +31,26 @@ cv2.imshow("Etape 2 : image en gris", gris) #à effacer
 
 # Floute légèrement pour que la détection de cercle soit plus robuste, enlève le bruit autours des contours
 gris_floute = cv2.GaussianBlur(gris, (9, 9), 0) #La fonction fait une moyenne de la couleur des 9 pixels voisin pour chaque pixel
-cv2.imshow("Etape 3 : image en gris flouté", gris_floute) #à effacer
+cv2.imshow("Etape 3 : image en gris flou", gris_floute) #à effacer
 
 # Cherche le cercle du cadran avec la transformée de Hough
 cercles = cv2.HoughCircles(
-    gris_floute,
-    cv2.HOUGH_GRADIENT,
+    gris_floute,		# image utilisé
+    cv2.HOUGH_GRADIENT, # méthode utilisé : Chaque pixel de contour (changement brusque d'intensité lumineuse) vote pour tous ces "centres possibles"
+						# dans la direction du gradient, l'endroit qui a le plus de vote est élu centre du cercle et le rayon constant est enrigistré
     dp=1,             # résolution de l'accumulateur. 1 => même résolution que image. 2 => deux fois plus flou. valeur recommandé => 1.5
-    minDist=100,      # distance minimale entre deux cercles détectés
-    param1=50,        # seuil haut pour la détection de contours
-    param2=40,        # seuil d'accumulation (plus bas = plus permissif)
-    minRadius=80,
+    minDist=100,      # distance minimale entre deux centres cercles détectés
+    param1=50,        # seuil pour la senisibilité  de la détection de contours => 50 à 150
+    param2=20,        # seuil d'accumulation, minimum à attaindre pour être considéré comme un cercle (plus bas = plus permissif) ==> 20 à 100 
+    minRadius=0,
     maxRadius=300
 )
 
 if cercles is None:
-    print("Aucun cercle trouvé. Essaie d'ajuster minRadius/maxRadius selon la photo.")
+    print("Aucun cercle trouvé. Ajuster les paramètres de HoughCircles")
     exit()
 
-# Je prends le premier cercle trouvé (normalement la frontière)
+# Prend le premier cercle trouvé, cadran intérieur
 cx, cy, rayon = np.round(cercles[0][0]).astype(int)
 print(f"Cadran détecté → centre : ({cx}, {cy}), rayon : {rayon}px")
 
