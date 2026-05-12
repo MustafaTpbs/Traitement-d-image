@@ -1,167 +1,188 @@
-# ─── Bibliothèques ────────────────────────────────────────────────────────────
+# ─── Bibliotheques ────────────────────────────────────────────────────────────
 import cv2
 import numpy as np
 
-# ─── PARAMÈTRES ───────────────────────────────────────────────────────────────
-
-# Nom de l'image à analyser (doit être dans le même dossier que ce script)
-IMAGE = "indicateur1.jpeg"
-
-# Valeurs min et max de l'échelle de l'indicateur
-VALEUR_MIN = -35
+# ─── PARAMETRES ───────────────────────────────────────────────────────────────
+IMAGE      = "indicateur1.jpeg"
+VALEUR_MIN = -20
 VALEUR_MAX = 100
 
-# ─── CHARGEMENT DE L'IMAGE ────────────────────────────────────────────────────
+# Convention trigo : 0 deg = droite, sens antihoraire, Y image inverse.
+# MIN est en bas => ~240 deg    MAX est en haut => ~120 deg
+ANGLE_MIN_DEG = 240.0
+ANGLE_MAX_DEG = 120.0
 
-# Charge l'image depuis le dossier courant
+# ─── CHARGEMENT ───────────────────────────────────────────────────────────────
 img = cv2.imread(IMAGE)
 if img is None:
-    print(f"Erreur : impossible de charger '{IMAGE}'. Vérifiez que le fichier est dans le même dossier.")
+    print(f"Erreur : impossible de charger '{IMAGE}'.")
     exit()
 
-# Fait une copie propre pour dessiner dessus à la fin
 img_resultat = img.copy()
-cv2.imshow("Etape 1 : image de base", img_resultat) #à effacer
+cv2.imshow("Etape 1 : image de base", img_resultat)  # a effacer
 
-# ─── ISOLATION DE LA ZONE CIRCULAIRE (LE CADRAN) ──────────────────────────────
+# ─── DETECTION DU CERCLE ──────────────────────────────────────────────────────
+gris        = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+gris_floute = cv2.GaussianBlur(gris, (9, 9), 0)
+cv2.imshow("Etape 2 : gris flou", gris_floute)  # a effacer
 
-# Convertie en niveaux de gris pour détecter le cercle
-gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-cv2.imshow("Etape 2 : image en gris", gris) #à effacer
-
-# Floute légèrement pour que la détection de cercle soit plus robuste, enlève le bruit autours des contours
-gris_floute = cv2.GaussianBlur(gris, (9, 9), 0) #La fonction fait une moyenne de la couleur des 9 pixels voisin pour chaque pixel
-cv2.imshow("Etape 3 : image en gris flou", gris_floute) #à effacer
-
-# Cherche le cercle du cadran avec la transformée de Hough
 cercles = cv2.HoughCircles(
-    gris_floute,		# image utilisé
-    cv2.HOUGH_GRADIENT, # méthode utilisé : Chaque pixel de contour (changement brusque d'intensité lumineuse) vote pour tous ces "centres possibles"
-						# dans la direction du gradient, l'endroit qui a le plus de vote est élu centre du cercle et le rayon constant est enrigistré
-    dp=1,             # résolution de l'accumulateur. 1 => même résolution que image. 2 => deux fois plus flou. valeur recommandé => 1.5
-    minDist=100,      # distance minimale entre deux centres cercles détectés
-    param1=50,        # seuil pour la senisibilité  de la détection de contours => 50 à 150
-    param2=20,        # seuil d'accumulation, minimum à attaindre pour être considéré comme un cercle (plus bas = plus permissif) ==> 20 à 100 
-    minRadius=0,
-    maxRadius=300
+    gris_floute, cv2.HOUGH_GRADIENT,
+    dp=1, minDist=100, param1=50, param2=20,
+    minRadius=0, maxRadius=300
+)
+if cercles is None:
+    print("Aucun cercle trouve. Ajuster les parametres de HoughCircles.")
+    exit()
+
+cx, cy, rayon = np.round(cercles[0][0]).astype(int)
+print(f"Cadran detecte => centre : ({cx}, {cy}), rayon : {rayon}px")
+
+masque_cercle = np.zeros(img.shape[:2], dtype=np.uint8)
+cv2.circle(masque_cercle, (cx, cy), rayon, 255, -1)
+cv2.imshow("Etape 3 : masque cadran", masque_cercle)  # a effacer
+
+# ─── MASQUE DE LA ZONE UTILE ──────────────────────────────────────────────────
+angle_min_rad = np.deg2rad(ANGLE_MIN_DEG)
+angle_max_rad = np.deg2rad(ANGLE_MAX_DEG)
+angles_arc    = np.linspace(angle_min_rad, angle_max_rad, 300)
+
+masque_secteur = np.zeros(img.shape[:2], dtype=np.uint8)
+points_arc = np.array([
+    [cx + rayon * np.cos(a), cy - rayon * np.sin(a)]
+    for a in angles_arc
+], dtype=np.int32)
+cv2.fillPoly(masque_secteur, [np.vstack([[cx, cy], points_arc])], 255)
+cv2.imshow("Etape 4 : masque zone utile", masque_secteur)  # a effacer
+
+# ─── DETECTION DU ROUGE ET DU BLANC DANS LA ZONE UTILE ───────────────────────
+hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
+masque_rouge = cv2.bitwise_or(
+    cv2.inRange(hsv, np.array([0,   80,  80]), np.array([10,  255, 255])),
+    cv2.inRange(hsv, np.array([160, 80,  80]), np.array([180, 255, 255]))
+)
+masque_rouge = cv2.bitwise_and(masque_rouge, masque_secteur)
+masque_rouge = cv2.morphologyEx(masque_rouge, cv2.MORPH_CLOSE, kernel)
+
+masque_blanc = cv2.inRange(hsv, np.array([0, 0, 180]), np.array([180, 60, 255]))
+masque_blanc = cv2.bitwise_and(masque_blanc, masque_secteur)
+masque_blanc = cv2.morphologyEx(masque_blanc, cv2.MORPH_CLOSE, kernel)
+
+cv2.imshow("Etape 5 : masque rouge", masque_rouge)  # a effacer
+cv2.imshow("Etape 6 : masque blanc", masque_blanc)  # a effacer
+
+# ─── CONTOUR UNIQUEMENT A LA JONCTION ROUGE/BLANC ────────────────────────────
+# On dilate les deux masques pour qu'ils se chevauchent un peu,
+# puis on prend leur intersection : seuls les pixels a la frontiere
+# rouge/blanc sont dans les deux zones dilatees en meme temps.
+# Canny sur l'image originale dans cette zone donne le contour net
+# de la frontiere, sans les bords parasites rouge/noir ou blanc/noir.
+bord_rouge = cv2.dilate(masque_rouge, kernel, iterations=3)
+bord_blanc = cv2.dilate(masque_blanc, kernel, iterations=3)
+jonction   = cv2.bitwise_and(bord_rouge, bord_blanc)
+
+contours_img      = cv2.Canny(gris, 30, 100)
+contour_frontiere = cv2.bitwise_and(contours_img, jonction)
+cv2.imshow("Etape 7 : contour frontiere rouge/blanc", contour_frontiere)  # a effacer
+
+# ─── HOUGH LINEAIRE SUR LE CONTOUR DE LA FRONTIERE ───────────────────────────
+segments = cv2.HoughLinesP(
+    contour_frontiere,
+    rho=1,
+    theta=np.pi/180,
+    threshold=15,
+    minLineLength=rayon * 0.2,
+    maxLineGap=15
 )
 
-if cercles is None:
-    print("Aucun cercle trouvé. Ajuster les paramètres de HoughCircles")
+if segments is None:
+    print("Aucun segment trouve. Verifier les masques rouge et blanc.")
     exit()
 
-# Prend le premier cercle trouvé, cadran intérieur
-cx, cy, rayon = np.round(cercles[0][0]).astype(int)
-print(f"Cadran détecté → centre : ({cx}, {cy}), rayon : {rayon}px")
+# On garde le segment dont la droite portante passe le plus pres du centre
+meilleur_segment = None
+distance_min     = float("inf")
 
-# Je crée un masque circulaire pour ignorer ce qui est en dehors du cadran
-masque_cercle = np.zeros(img.shape[:2], dtype=np.uint8)
-cv2.circle(masque_cercle, (cx, cy), rayon, 255, -1)  # -1 = remplissage
+for seg in segments:
+    x1, y1, x2, y2 = seg[0]
+    dx, dy = x2 - x1, y2 - y1
+    dist = abs(dy * cx - dx * cy + x2 * y1 - y2 * x1) / (np.sqrt(dx**2 + dy**2) + 1e-6)
+    if dist < distance_min:
+        distance_min     = dist
+        meilleur_segment = seg[0]
 
-# ─── DÉTECTION DE LA COULEUR ROSE ─────────────────────────────────────────────
+x1, y1, x2, y2 = meilleur_segment
+print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2}), distance au centre : {distance_min:.1f}px")
 
-# Je convertis en HSV, plus pratique pour isoler une couleur
-hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+# ─── CALCUL DE L'ANGLE DE LA FRONTIERE ───────────────────────────────────────
+d1 = (x1 - cx)**2 + (y1 - cy)**2
+d2 = (x2 - cx)**2 + (y2 - cy)**2
+px_loin, py_loin = (x2, y2) if d2 > d1 else (x1, y1)
 
-# Plage de couleur pour le rose/rouge 
-# Le rose de l'indicateur tombe dans ces valeurs HSV
-rose_bas = np.array([140, 30, 150])
-rose_haut = np.array([180, 255, 255])
-masque_rose = cv2.inRange(hsv, rose_bas, rose_haut)
+angle_frontiere_rad = np.arctan2(-(py_loin - cy), px_loin - cx)
+angle_frontiere_deg = np.rad2deg(angle_frontiere_rad) % 360
+print(f"Angle frontiere : {angle_frontiere_deg:.1f} deg")
 
-# Je complète avec le rouge côté bas du spectre HSV (0-10)
-rouge_bas = np.array([0, 30, 150])
-rouge_haut = np.array([10, 255, 255])
-masque_rouge = cv2.inRange(hsv, rouge_bas, rouge_haut)
-
-# Je combine les deux masques roses/rouges
-masque_couleur = cv2.bitwise_or(masque_rose, masque_rouge)
-
-# J'applique le masque circulaire : je garde uniquement l'intérieur du cadran
-masque_final = cv2.bitwise_and(masque_couleur, masque_cercle)
-
-# ─── CALCUL DU NIVEAU ─────────────────────────────────────────────────────────
-
-# Je compte les pixels roses dans la moitié basse vs la moitié haute du cadran
-# → le fond tourne, le rose en bas = plein, le blanc en bas = vide
-hauteur_cadran = rayon * 2
-
-# Je découpe le masque dans la zone du cadran
-y1 = max(cy - rayon, 0)
-y2 = min(cy + rayon, img.shape[0])
-x1 = max(cx - rayon, 0)
-x2 = min(cx + rayon, img.shape[1])
-
-zone_masque = masque_final[y1:y2, x1:x2]
-
-# Je calcule le ratio de pixels roses sur l'ensemble de la zone du cadran
-pixels_roses = np.count_nonzero(zone_masque)
-pixels_total = np.count_nonzero(masque_cercle[y1:y2, x1:x2])
-ratio = pixels_roses / pixels_total if pixels_total > 0 else 0
-
-# Je mappe ce ratio sur l'échelle min/max de l'indicateur
+# ─── CALCUL DE LA VALEUR ──────────────────────────────────────────────────────
+plage_deg        = ANGLE_MIN_DEG - ANGLE_MAX_DEG
+mesure_deg       = ANGLE_MIN_DEG - angle_frontiere_deg
+ratio            = max(0.0, min(1.0, mesure_deg / plage_deg))
 valeur_numerisee = VALEUR_MIN + ratio * (VALEUR_MAX - VALEUR_MIN)
-print(f"Pixels roses : {pixels_roses} / {pixels_total} → ratio : {ratio:.2%}")
-print(f"Valeur numérisée : {valeur_numerisee:.1f}")
+print(f"Ratio : {ratio:.2%}  =>  Valeur : {valeur_numerisee:.1f}")
 
-# ─── DÉTECTION DE LA FRONTIÈRE ROSE / BLANC ───────────────────────────────────
+# ─── DESSIN DES ANNOTATIONS ───────────────────────────────────────────────────
 
-# Je floute le masque pour avoir une frontière douce
-masque_floute = cv2.GaussianBlur(masque_final, (21, 21), 0)
-
-# Je cherche les contours de la zone rose (frontière avec le blanc)
-contours, _ = cv2.findContours(masque_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-# ─── DESSIN DES ANNOTATIONS SUR L'IMAGE RÉSULTAT ──────────────────────────────
-
-# Je dessine le cercle du cadran détecté
-cv2.circle(img_resultat, (cx, cy), rayon, (0, 200, 0), 2)
-
-# Je dessine les contours de la frontière rose/blanc en bleu
-cv2.drawContours(img_resultat, contours, -1, (255, 100, 0), 2)
-
-# Je marque le centre du cadran
-cv2.circle(img_resultat, (cx, cy), 4, (0, 255, 255), -1)
-
-# J'ajoute le texte MIN en bas du cadran
-pos_min = (cx - rayon + 10, cy + rayon - 10)
-cv2.putText(img_resultat, f"MIN {VALEUR_MIN}", pos_min,
-            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (50, 50, 255), 2)
-
-# J'ajoute le texte MAX en haut du cadran
-pos_max = (cx - rayon + 10, cy - rayon + 20)
-cv2.putText(img_resultat, f"MAX {VALEUR_MAX}", pos_max,
-            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (50, 50, 255), 2)
-
-# J'affiche la valeur numérisée bien visible au centre
-label = f"Niveau : {valeur_numerisee:.1f}"
-cv2.putText(img_resultat, label, (cx - 70, cy + 40),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
-
-# ─── SUPERPOSITION DU MASQUE ROSE EN TRANSPARENCE ────────────────────────────
-
-# Je crée une image colorée à partir du masque (rose semi-transparent)
 overlay = img_resultat.copy()
-overlay[masque_final > 0] = [180, 60, 180]  # je colorie les pixels roses détectés
-img_resultat = cv2.addWeighted(overlay, 0.25, img_resultat, 0.75, 0)  # je mélange
+overlay[masque_rouge > 0] = [0, 0, 200]
+img_resultat = cv2.addWeighted(overlay, 0.3, img_resultat, 0.7, 0)
 
-# Je re-dessine les textes par-dessus la transparence (sinon ils sont écrasés)
-cv2.drawContours(img_resultat, contours, -1, (255, 100, 0), 2)
-cv2.putText(img_resultat, f"MIN {VALEUR_MIN}", pos_min,
-            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (50, 50, 255), 2)
-cv2.putText(img_resultat, f"MAX {VALEUR_MAX}", pos_max,
-            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (50, 50, 255), 2)
-cv2.putText(img_resultat, label, (cx - 70, cy + 40),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+cv2.circle(img_resultat, (cx, cy), rayon, (0, 200, 0), 1)
+
+for i in range(len(angles_arc) - 1):
+    p1 = (int(cx + rayon * np.cos(angles_arc[i])),   int(cy - rayon * np.sin(angles_arc[i])))
+    p2 = (int(cx + rayon * np.cos(angles_arc[i+1])), int(cy - rayon * np.sin(angles_arc[i+1])))
+    cv2.line(img_resultat, p1, p2, (0, 200, 255), 2)
+
+# Graduations de 10 en 10 : de -20 a 100 => 13 graduations
+valeurs_grad = range(int(VALEUR_MIN), int(VALEUR_MAX) + 1, 10)
+for val in valeurs_grad:
+    t     = (val - VALEUR_MIN) / (VALEUR_MAX - VALEUR_MIN)
+    angle = angle_min_rad + t * (angle_max_rad - angle_min_rad)
+
+    px_ext = int(cx + rayon        * np.cos(angle))
+    py_ext = int(cy - rayon        * np.sin(angle))
+    px_int = int(cx + (rayon - 12) * np.cos(angle))
+    py_int = int(cy - (rayon - 12) * np.sin(angle))
+    px_lbl = int(cx + (rayon + 16) * np.cos(angle))
+    py_lbl = int(cy - (rayon + 16) * np.sin(angle))
+
+    cv2.line(img_resultat, (px_int, py_int), (px_ext, py_ext), (255, 220, 0), 1)
+    cv2.putText(img_resultat, f"{val:.0f}", (px_lbl - 10, py_lbl + 4),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 220, 0), 1)
+
+for label, angle_r in [("MIN", angle_min_rad), ("MAX", angle_max_rad)]:
+    px = int(cx + (rayon + 22) * np.cos(angle_r))
+    py = int(cy - (rayon + 22) * np.sin(angle_r))
+    cv2.putText(img_resultat, label, (px - 12, py + 4),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 200, 255), 1)
+
+px_bord = int(cx + rayon * np.cos(angle_frontiere_rad))
+py_bord = int(cy - rayon * np.sin(angle_frontiere_rad))
+cv2.line(img_resultat, (cx, cy), (px_bord, py_bord), (0, 220, 220), 2)
+
+cv2.circle(img_resultat, (cx, cy), 3, (255, 255, 255), -1)
+
+cv2.putText(img_resultat, f"Niveau : {valeur_numerisee:.1f}",
+            (cx - rayon + 5, cy + rayon + 20),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
 # ─── SAUVEGARDE ET AFFICHAGE ──────────────────────────────────────────────────
-
-# Je sauvegarde l'image annotée dans le même dossier
 cv2.imwrite("resultat_analyse.png", img_resultat)
-print("Image annotée sauvegardée : resultat_analyse.png")
+print("Image sauvegardee : resultat_analyse.png")
 
-# J'affiche les deux images côte à côte pour comparer
-cv2.imshow("Image originale", img)
+cv2.imshow("Image originale",      img)
 cv2.imshow("Analyse niveau huile", img_resultat)
-cv2.waitKey(0)   # j'attends que l'utilisateur appuie sur une touche
+cv2.waitKey(0)
 cv2.destroyAllWindows()
