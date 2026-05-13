@@ -1,9 +1,21 @@
 # ─── Bibliotheques ────────────────────────────────────────────────────────────
 import cv2
 import numpy as np
+from picamzero import Camera
+import os
 
 # ─── PARAMETRES ───────────────────────────────────────────────────────────────
-IMAGE      = "indicateur1.jpeg"
+cam = Camera()
+cam.still_size = (396,378)
+cam.preview_size = (396,378)
+cam.brightness = 0.05
+cam.white_balance = "auto"
+cam.start_preview()
+cam.take_photo(f"/home/raspberry/Projet Indicateur EDF/image.jpg")
+cam.stop_preview()
+
+IMAGE = "image.jpg"
+
 VALEUR_MIN = -20
 VALEUR_MAX = 100
 
