@@ -1,6 +1,8 @@
 # ─── Bibliotheques ────────────────────────────────────────────────────────────
 import cv2
 import numpy as np
+import sys
+from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande
 from picamzero import Camera
 import os
 
@@ -16,7 +18,10 @@ cam.start_preview()
 cam.take_photo(f"/home/raspberry/Projet Indicateur EDF/image.jpg")
 cam.stop_preview()
 
-IMAGE = "image.jpg"
+IMAGE = "indicateur1_angle1_pastilles.jpg"    # image en perspective avec pastilles
+#IMAGE = "indicateur1.jpeg"
+#IMAGE = "indicateur2.png"
+#IMAGE = "image.jpg"
 
 VALEUR_MIN = -20    # Valeur gravee sur le repere MIN du cadran
 VALEUR_MAX = 100    # Valeur gravee sur le repere MAX du cadran
@@ -32,10 +37,30 @@ img = cv2.imread(IMAGE)
 if img is None:
     print(f"Erreur : impossible de charger '{IMAGE}'.")
     exit()
+    
+img = redimensionner_si_trop_grande(img, largeur_max=500)
+
+cv2.imshow("Etape 1 : image de base", img)  # a effacer
+
+# ─── REDRESSEMENT ───────────────────────────────────────────────────────────────
+img_ref = cv2.imread("indicateur1_pastilles.jpg")
+img_ref = redimensionner_si_trop_grande(img_ref, largeur_max=500)
+
+# Détection des points avec vos fonctions importées
+pts_test, _ = detecter_pastilles(img, "test")
+pts_ref, _ = detecter_pastilles(img_ref, "reference")
+
+# Calcul de la transformation
+src = trier_losange(pts_test)
+dst = trier_losange(pts_ref)
+M = cv2.getPerspectiveTransform(src, dst)
+
+# Application du redressement sur 'img'
+h, w = img_ref.shape[:2]
+img = cv2.warpPerspective(img, M, (w, h))
 
 # Copie propre sur laquelle on va dessiner les annotations a la fin
 img_resultat = img.copy()
-cv2.imshow("Etape 1 : image de base", img_resultat)  # a effacer
 
 # ─── DETECTION DU CERCLE ──────────────────────────────────────────────────────
 # Conversion en niveaux de gris, necessaire pour HoughCircles car la méthode ne fonctionne pas s'il y a des couleurs
@@ -108,7 +133,7 @@ masque_rouge = cv2.bitwise_and(masque_rouge, masque_secteur)
 masque_rouge = cv2.morphologyEx(masque_rouge, cv2.MORPH_CLOSE, kernel)
 
 # Le blanc : saturation tres basse (S proche de 0) et luminosite tres haute (V proche de 255)
-masque_blanc = cv2.inRange(hsv, np.array([0, 0, 180]), np.array([180, 60, 255]))
+masque_blanc = cv2.inRange(hsv, np.array([0, 0, 160]), np.array([180, 80, 255]))
 masque_blanc = cv2.bitwise_and(masque_blanc, masque_secteur)
 masque_blanc = cv2.morphologyEx(masque_blanc, cv2.MORPH_CLOSE, kernel)
 
