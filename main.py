@@ -4,24 +4,40 @@ import numpy as np
 import sys
 from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande
 from picamzero import Camera
+import time
 import os
 
-# ─── PARAMETRES ───────────────────────────────────────────────────────────────
-# Initialise la camera picamzero
+#─── PRISE DE PHOTO ───────────────────────────────────────────────────────────
 cam = Camera()
-cam.still_size = (396,378)     # Configuration de la resolution de la photo en pixels (largeur x hauteur)
-cam.preview_size = (396,378)
-cam.brightness = 0.05         # Luminosite (0.05 = tres legerement plus lumineux)
-cam.white_balance = "auto"     # Balance des blancs automatique selon la temperature de couleur
+cam.still_size = (1280, 960)  # Résolution plus élevée pour plus de détails
+cam.preview_size = (640, 480)
+#Paramètres anti-reflet / stabilisation exposure
+cam.brightness = 0.0              # Pas de surexposition artificielle
+cam.white_balance = "auto"
+#Laisser l'AEC/AGC converger avant la capture
 cam.start_preview()
-# Capture et sauvegarde la photo sur disque
-cam.take_photo(f"/home/raspberry/Projet Indicateur EDF/image.jpg")
+time.sleep(2.0) # 2 s de stabilisation = moins de reflets "chauds"
+cam.take_photo("/home/raspberry/Projet Indicateur EDF/image.jpg")
 cam.stop_preview()
+#Post-traitement anti-reflet : correction gamma + CLAHE
+img_brute = cv2.imread("/home/raspberry/Projet Indicateur EDF/image.jpg")
+#Correction gamma 1.3 : assombrit les hautes lumières sans toucher les foncés
+gamma   = 1.3
+lut     = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)], dtype=np.uint8)
+img_brute = cv2.LUT(img_brute, lut)
+#CLAHE sur le canal L (Lab) : améliore le contraste local, réduit l'effet voile des reflets
+lab  = cv2.cvtColor(img_brute, cv2.COLOR_BGR2Lab)
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+lab[:, :, 0] = clahe.apply(lab[:, :, 0])
+img_brute = cv2.cvtColor(lab, cv2.COLOR_Lab2BGR)
+cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)
 
-IMAGE = "indicateur1_angle1_pastilles.jpg"    # image en perspective avec pastilles
-#IMAGE = "indicateur1.jpeg"
+
+#IMAGE = "indicateur1_angle1_pastilles.jpg"    # image en perspective avec pastilles
+#IMAGE = "indicateur1_pastilles.jpg"
+#IMAGE = "vrai_indicateur_pastilles.png"
 #IMAGE = "indicateur2.png"
-#IMAGE = "image.jpg"
+IMAGE = "image.jpg"
 
 VALEUR_MIN = -20    # Valeur gravee sur le repere MIN du cadran
 VALEUR_MAX = 100    # Valeur gravee sur le repere MAX du cadran
@@ -171,6 +187,7 @@ segments = cv2.HoughLinesP(
 
 if segments is None:
     print("Aucun segment trouve. Verifier les masques rouge et blanc.")
+    cv2.waitKey(0)
     exit()
 
 # Parmi tous les segments detectes, on garde celui dont la droite portante
