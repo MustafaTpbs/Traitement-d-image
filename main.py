@@ -32,15 +32,25 @@ lab[:, :, 0] = clahe.apply(lab[:, :, 0])
 img_brute = cv2.cvtColor(lab, cv2.COLOR_Lab2BGR)
 cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)
 
-
 #IMAGE = "indicateur1_angle1_pastilles.jpg"    # image en perspective avec pastilles
 #IMAGE = "indicateur1_pastilles.jpg"
-#IMAGE = "vrai_indicateur_pastilles.png"
 #IMAGE = "indicateur2.png"
+
 IMAGE = "image.jpg"
 
-VALEUR_MIN = -20    # Valeur gravee sur le repere MIN du cadran
-VALEUR_MAX = 100    # Valeur gravee sur le repere MAX du cadran
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/base.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/basse.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/blanc.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/rouge.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/max.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/min.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/nuit.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/reflet.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai1.png"
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png"
+
+VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran
+VALEUR_MAX = 150    # Valeur gravee sur le repere MAX du cadran
 
 # Convention trigo : 0 deg = droite, sens antihoraire, Y image inverse.
 # MIN est en bas => ~240 deg   MAX est en haut => ~120 deg
@@ -99,6 +109,7 @@ cercles = cv2.HoughCircles(
 )
 if cercles is None:
     print("Aucun cercle trouve. Ajuster les parametres de HoughCircles.")
+    cv2.waitKey(0)
     exit()
 
 # cercles[0][0] = meilleur cercle detecte : [x_centre, y_centre, rayon]
@@ -128,7 +139,7 @@ points_arc = np.array([
 # fillPoly remplit ce polygone en blanc dans le masque
 cv2.fillPoly(masque_secteur, [np.vstack([[cx, cy], points_arc])], 255)
 cv2.imshow("Etape 4 : masque zone utile", masque_secteur)  # a effacer
-
+'''
 # ─── DETECTION DU ROUGE ET DU BLANC DANS LA ZONE UTILE ───────────────────────
 # Conversion en HSV (Teinte, Saturation, Valeur)
 # Plus pratique que BGR pour isoler une couleur precise
@@ -155,6 +166,35 @@ masque_blanc = cv2.morphologyEx(masque_blanc, cv2.MORPH_CLOSE, kernel)
 
 cv2.imshow("Etape 5 : masque rouge", masque_rouge)  # a effacer
 cv2.imshow("Etape 6 : masque blanc", masque_blanc)  # a effacer
+'''
+
+# ─── DETECTION DU ROUGE ET DU BLANC DANS LA ZONE UTILE ───────────────────────
+lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)   # conservé uniquement pour masque_blanc
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)) #le kernel est une forme géométrique simple pour dilater/boucher plus tard les zones utiles
+
+# Zone rouge/rose : canal a* élevé (rouge dans LAB)
+masque_rouge = cv2.inRange(lab, np.array([20, 133, 0]), np.array([255, 255, 255]))
+masque_rouge = cv2.bitwise_and(masque_rouge, masque_secteur) # bitwise_or fusionne les deux masques en un seul
+masque_rouge = cv2.morphologyEx(masque_rouge, cv2.MORPH_OPEN,  kernel, iterations=1)
+masque_rouge = cv2.morphologyEx(masque_rouge, cv2.MORPH_CLOSE, kernel, iterations=3)
+
+# Zone blanche = tout le secteur MOINS la zone rouge
+# Plus besoin de détecter le blanc explicitement : c'est ce qui reste
+masque_blanc = cv2.bitwise_and(
+    cv2.bitwise_not(masque_rouge),
+    masque_secteur
+)
+masque_blanc = cv2.morphologyEx(masque_blanc, cv2.MORPH_OPEN, kernel, iterations=1)
+
+nb_r = cv2.countNonZero(masque_rouge)
+nb_b = cv2.countNonZero(masque_blanc)
+print(f"[DIAG] masque_rouge={nb_r}px  masque_blanc={nb_b}px")
+if nb_r < 200:
+    print("[DIAG] ATTENTION : rouge trop peu détecté — vérifier la photo")
+
+cv2.imshow("Etape 5 : masque rouge", masque_rouge)
+cv2.imshow("Etape 6 : masque blanc", masque_blanc)
 
 # ─── CONTOUR UNIQUEMENT A LA JONCTION ROUGE/BLANC ────────────────────────────
 # Canny detecte tous les bords (rouge/noir, blanc/noir, rouge/blanc).
@@ -163,7 +203,7 @@ cv2.imshow("Etape 6 : masque blanc", masque_blanc)  # a effacer
 # l intersection des zones dilatees = uniquement la zone de contact rouge/blanc.
 # Canny applique dans cette zone ne retient que le bord qui interesse.
 bord_rouge = cv2.dilate(masque_rouge, kernel, iterations=3)     # Agrandit la zone rouge
-bord_blanc = cv2.dilate(masque_blanc, kernel, iterations=3)     # Agrandit la zone blanche
+bord_blanc = cv2.dilate(masque_blanc, kernel, iterations=3)     # Agrandit la zone blanche #ici
 jonction   = cv2.bitwise_and(bord_rouge, bord_blanc)            # Zone de chevauchement = frontiere
 
 # Detecte les bords dans l image en gris par gradient d intensite
@@ -172,7 +212,7 @@ contours_img = cv2.Canny(gris, 30, 100)
 # Garde uniquement les bords situes dans la zone de jonction rouge/blanc
 contour_frontiere = cv2.bitwise_and(contours_img, jonction)
 cv2.imshow("Etape 7 : contour frontiere rouge/blanc", contour_frontiere)  # a effacer
-
+'''
 # ─── HOUGH LINEAIRE SUR LE CONTOUR DE LA FRONTIERE ───────────────────────────
 # La frontiere rouge/blanc est une droite radiale partant du centre.
 # HoughLinesP detecte des segments de droite dans une image binaire par vote.
@@ -206,6 +246,74 @@ for seg in segments:
 
 x1, y1, x2, y2 = meilleur_segment
 print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2}), distance au centre : {distance_min:.1f}px")
+'''
+# ─── HOUGH LINEAIRE SUR LE CONTOUR DE LA FRONTIERE ───────────────────────────
+segments = cv2.HoughLinesP(
+    contour_frontiere,
+    rho=1,
+    theta=np.pi/180,
+    threshold=15,
+    minLineLength=rayon * 0.2,
+    maxLineGap=15
+)
+
+if segments is None:
+    print("Aucun segment trouve. Verifier les masques rouge et blanc.")
+    cv2.waitKey(0)
+    exit()
+
+# ── Calcul du score de chaque segment ─────────────────────────────────────────
+def score_segment(seg, cx, cy):
+    x1, y1, x2, y2 = seg
+    dx, dy = x2-x1, y2-y1
+    longueur = np.sqrt(dx**2 + dy**2) + 1e-6
+    dist_centre = abs(dy*cx - dx*cy + x2*y1 - y2*x1) / longueur
+    d1 = (x1-cx)**2 + (y1-cy)**2
+    d2 = (x2-cx)**2 + (y2-cy)**2
+    px_l, py_l = (x2,y2) if d2>d1 else (x1,y1)
+    a_seg = np.rad2deg(np.arctan2(-(py_l-cy), px_l-cx)) % 360
+    # Score : distance au centre, pénalité si court
+    score = dist_centre - longueur * 0.3
+    return score, a_seg, longueur, dist_centre
+
+MARGE_BORD = 5.0   # °, pour détecter un faux bord sur le contour du masque
+
+# Séparer les segments "bord de masque" (angle ≈ MIN ou MAX) des vrais candidats
+candidats_normaux = []
+candidats_bord    = []
+
+for seg in segments:
+    score, a_seg, longueur, dist_centre = score_segment(seg[0], cx, cy)
+    # Hors secteur : ignorer
+    if not (ANGLE_MAX_DEG - MARGE_BORD <= a_seg <= ANGLE_MIN_DEG + MARGE_BORD):
+        continue
+    est_bord_masque = (
+        abs(a_seg - ANGLE_MIN_DEG) < MARGE_BORD or
+        abs(a_seg - ANGLE_MAX_DEG) < MARGE_BORD
+    )
+    if est_bord_masque:
+        candidats_bord.append((score, seg[0], a_seg))
+    else:
+        candidats_normaux.append((score, seg[0], a_seg))
+
+# Priorité 1 : meilleur candidat normal (frontière réelle dans le secteur)
+# Priorité 2 : si aucun candidat normal → l'aiguille est vraiment à MIN ou MAX
+if candidats_normaux:
+    candidats_normaux.sort(key=lambda x: x[0])
+    meilleur_segment = candidats_normaux[0][1]
+    print(f"[DIAG] Frontière normale à {candidats_normaux[0][2]:.0f}°")
+elif candidats_bord:
+    candidats_bord.sort(key=lambda x: x[0])
+    meilleur_segment = candidats_bord[0][1]
+    print(f"[DIAG] Fallback bord MIN/MAX : aiguille à l'extrémité ({candidats_bord[0][2]:.0f}°)")
+else:
+    # Dernier recours : segment le plus proche du centre sans aucun filtre
+    meilleur_segment = min(segments, key=lambda s: score_segment(s[0], cx, cy)[0])[0]
+    print("[DIAG] Fallback global")
+
+x1, y1, x2, y2 = meilleur_segment
+print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2})")
+
 
 # ─── CALCUL DE L'ANGLE DE LA FRONTIERE ───────────────────────────────────────
 # Le segment a deux extremites. On prend la plus eloignee du centre :
