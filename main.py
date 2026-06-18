@@ -48,8 +48,8 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/min.png"   #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/nuit.png"  #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/reflet.png"#RAPPORT
-IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai1.png" #RAPPORT
+IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -200,43 +200,6 @@ cv2.imshow("Etape 8 : Contour frontiere rouge/blanc => 'aguille'", contour_front
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
-'''
-# ─── HOUGH LINEAIRE SUR LE CONTOUR DE LA FRONTIERE ───────────────────────────
-# La frontiere rouge/blanc est une droite radiale partant du centre.
-# HoughLinesP detecte des segments de droite dans une image binaire par vote.
-segments = cv2.HoughLinesP(
-    contour_frontiere,
-    rho=1,                      # Resolution en pixels de l accumulateur de distance, cherche à 1 pixel près
-    theta=np.pi/180,            # Resolution angulaire : 1 degre par pas
-    threshold=15,               # Nombre minimum de votes (pixel alignés) pour valider un segment
-    minLineLength=rayon * 0.2,  # Longueur minimale acceptee : 20% du rayon du cadran de l'indicateur
-    maxLineGap=15               # Ecart maximal entre deux morceaux d un meme segment
-)
-
-if segments is None:
-    print("Aucun segment trouve. Verifier les masques rouge et blanc.")
-    cv2.waitKey(0)
-    exit()
-
-# Parmi tous les segments detectes, on garde celui dont la droite portante
-# passe le plus pres du centre du cadran 
-meilleur_segment = None
-distance_min = float("inf")
-
-for seg in segments:
-    x1, y1, x2, y2 = seg[0]
-    dx, dy = x2 - x1, y2 - y1
-    # Formule distance d un point a une droite : |dy*cx - dx*cy + x2*y1 - y2*x1| / longueur
-    dist = abs(dy * cx - dx * cy + x2 * y1 - y2 * x1) / (np.sqrt(dx**2 + dy**2) + 1e-6)
-    if dist < distance_min:
-        distance_min     = dist
-        meilleur_segment = seg[0]
-
-x1, y1, x2, y2 = meilleur_segment
-print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2}), distance au centre : {distance_min:.1f}px")
-'''
-
-
 # ─── HOUGH LINEAIRE SUR LE CONTOUR DE LA FRONTIERE ───────────────────────────────────
 '''     --Transformee de Hough--
 ==> Detecte les lignes dans l'image par vote. Ici l'image c'est le contour rouge/blanc'''
@@ -268,7 +231,7 @@ def score_segment(seg, cx, cy):
     a_seg = np.rad2deg(np.arctan2(-(py_l-cy), px_l-cx)) % 360 	 #convertit les coordonnées cartésiennes en angle polaire
     
     # Score : distance au centre, pénalité si court
-    score = dist_centre - longueur * 0.3
+    score = dist_centre - longueur * 0.3 #les segments longs et proches du centre ont les scores les plus bas, ils apparaissent en tête de liste lors du tri.
     
     return score, a_seg, longueur, dist_centre
 
@@ -293,57 +256,54 @@ for seg in segments:
     else:
         candidats_normaux.append((score, seg[0], a_seg))
 
-# Priorité 1 : meilleur candidat normal (frontière réelle dans le secteur)
-# Priorité 2 : si aucun candidat normal → l'aiguille est vraiment à MIN ou MAX
+#Priorité 1 : meilleur candidat normal (frontière réelle dans le secteur)
 if candidats_normaux:
     candidats_normaux.sort(key=lambda x: x[0])
     meilleur_segment = candidats_normaux[0][1]
-    print(f"[DIAG] Frontière normale à {candidats_normaux[0][2]:.0f}°")
+    print(f"[DIAG] Frontière normale à {candidats_normaux[0][2]:.0f}°") 	#RAPPORT
+    
+#Priorité 2 : si aucun candidat normal → l'aiguille est vraiment à MIN ou MAX
 elif candidats_bord:
     candidats_bord.sort(key=lambda x: x[0])
     meilleur_segment = candidats_bord[0][1]
-    print(f"[DIAG] Fallback bord MIN/MAX : aiguille à l'extrémité ({candidats_bord[0][2]:.0f}°)")
+    print(f"[DIAG] Fallback bord MIN/MAX : aiguille à l'extrémité ({candidats_bord[0][2]:.0f}°)") 	#RAPPORT
 else:
-    # Dernier recours : segment le plus proche du centre sans aucun filtre
+#Dernier recours : segment le plus proche du centre sans aucun filtre
     meilleur_segment = min(segments, key=lambda s: score_segment(s[0], cx, cy)[0])[0]
-    print("[DIAG] Fallback global")
+    print("[DIAG] Fallback global") 	#RAPPORT
 
 x1, y1, x2, y2 = meilleur_segment
-print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2})")
+print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2})")	#RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
-# ─── CALCUL DE L'ANGLE DE LA FRONTIERE ───────────────────────────────────────
-# Le segment a deux extremites. On prend la plus eloignee du centre :
-# c est elle qui donne la vraie direction vers le bord du cadran.
+# ─── CALCUL DE L'ANGLE DE LA FRONTIERE ───────────────────────────────────────────────
+# Le segment a deux extremites. On prend la plus eloignee du centre : c'est elle qui donne la vraie direction vers le bord du cadran.
 d1 = (x1 - cx)**2 + (y1 - cy)**2   # Distance au carre de l extremite 1 au centre
 d2 = (x2 - cx)**2 + (y2 - cy)**2   # Distance au carre de l extremite 2 au centre
 px_loin, py_loin = (x2, y2) if d2 > d1 else (x1, y1)
 
-# arctan2 calcule l angle de la direction centre -> point_loin
-# Le - devant (py_loin - cy) compense l axe Y qui pointe vers le bas en image
-angle_frontiere_rad = np.arctan2(-(py_loin - cy), px_loin - cx)
-angle_frontiere_deg = np.rad2deg(angle_frontiere_rad) % 360
-print(f"Angle frontiere : {angle_frontiere_deg:.1f} deg")
+angle_frontiere_rad = np.arctan2(-(py_loin - cy), px_loin - cx) 	# arctan2 calcule l angle de la direction centre -> point_loin
+angle_frontiere_deg = np.rad2deg(angle_frontiere_rad) % 360 	#Conversion en degré de l'angle
+print(f"Angle frontiere : {angle_frontiere_deg:.1f} deg") 	#RAPPORT
+#──────────────────────────────────────────────────────────────────────────────────────
 
-# ─── CALCUL DE LA VALEUR ──────────────────────────────────────────────────────
+
+# ─── CALCUL DE LA VALEUR ─────────────────────────────────────────────────────────────
 # Mappage de l angle mesure sur l echelle physique MIN -> MAX
-# plage_deg = amplitude totale entre le repere MIN et le repere MAX
-# mesure_deg = position de la frontiere depuis le repere MIN
-# ratio = position normalisee entre 0.0 (MIN) et 1.0 (MAX)
-plage_deg        = ANGLE_MIN_DEG - ANGLE_MAX_DEG
-mesure_deg       = ANGLE_MIN_DEG - angle_frontiere_deg
-ratio            = max(0.0, min(1.0, mesure_deg / plage_deg))
+plage_deg  = ANGLE_MIN_DEG - ANGLE_MAX_DEG 		#amplitude totale entre le repere MIN et le repere MAX
+mesure_deg = ANGLE_MIN_DEG - angle_frontiere_deg 		#position de la frontiere depuis le repere MIN
+ratio      = max(0.0, min(1.0, mesure_deg / plage_deg)) 		#ratio = position normalisee entre 0.0 (MIN) et 1.0 (MAX)
 valeur_numerisee = VALEUR_MIN + ratio * (VALEUR_MAX - VALEUR_MIN)
-print(f"Ratio : {ratio:.2%}  =>  Valeur : {valeur_numerisee:.1f}")
+print(f"Ratio : {ratio:.2%}  =>  Valeur : {valeur_numerisee:.1f}") 	#RAPPORT
+#──────────────────────────────────────────────────────────────────────────────────────
 
-# ─── DESSIN DES ANNOTATIONS ───────────────────────────────────────────────────
 
+# ─── DESSIN DES ANNOTATIONS - RAPPORT ────────────────────────────────────────────────
 # Surbrillance semi-transparente sur les pixels detectes comme rouges
-# addWeighted melange overlay (30%) et img_resultat (70%)
 overlay = img_resultat.copy()
 overlay[masque_rouge > 0] = [0, 0, 200]
-img_resultat = cv2.addWeighted(overlay, 0.3, img_resultat, 0.7, 0)
+img_resultat = cv2.addWeighted(overlay, 0.3, img_resultat, 0.7, 0)		#addWeighted melange overlay (30%) et img_resultat (70%)
 
 # Cercle vert sur le contour du cadran detecte
 cv2.circle(img_resultat, (cx, cy), rayon, (0, 200, 0), 1)
@@ -386,15 +346,18 @@ cv2.line(img_resultat, (cx, cy), (px_bord, py_bord), (0, 220, 220), 2)
 # Point blanc au centre du cadran
 cv2.circle(img_resultat, (cx, cy), 3, (255, 255, 255), -1)
 
-# Valeur numerisee en bas a gauche du cadran
+# Valeur numerisee au centre du cadran
 cv2.putText(img_resultat, f"Niveau : {valeur_numerisee:.1f}",
-            (cx - rayon + 5, cy + rayon + 20),
+            (cx + 10, cy ),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+#──────────────────────────────────────────────────────────────────────────────────────
 
-# ─── SAUVEGARDE ET AFFICHAGE ──────────────────────────────────────────────────
+
+# ─── SAUVEGARDE ET AFFICHAGE - RAPPORT ───────────────────────────────────────────────
 cv2.imwrite("resultat_analyse.png", img_resultat)   # Sauvegarde l image annotee sur disque
 print("Image sauvegardee : resultat_analyse.png")
 
-cv2.imshow("Analyse niveau huile", img_resultat)
+cv2.imshow("Image finale : Analyse niveau huile", img_resultat)
 cv2.waitKey(0)          # Attend une touche clavier avant de fermer
 cv2.destroyAllWindows() # Ferme toutes les fenetres OpenCV
+#──────────────────────────────────────────────────────────────────────────────────────
