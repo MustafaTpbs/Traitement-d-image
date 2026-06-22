@@ -38,7 +38,7 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/base.png"  #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/basse.png" #RAPPORT
@@ -49,7 +49,7 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/nuit.png"  #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/reflet.png"#RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai1.png" #RAPPORT
-IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -186,7 +186,7 @@ Pour isoler uniquement la frontiere rouge/blanc :
 On dilate les deux masques pour les faire se chevaucher,
 Donc : l intersection des zones dilatees = uniquement la zone de contact rouge/blanc.
 Canny applique dans cette zone ne retient que le bord qui interesse. '''
-bord_rouge = cv2.dilate(masque_rouge, kernel, iterations=10)     # Agrandit la zone rouge
+bord_rouge = cv2.dilate(masque_rouge, kernel, iterations=5)     # Agrandit la zone rouge
 bord_blanc = cv2.dilate(masque_blanc, kernel, iterations=3)      # Agrandit la zone blanche 
 jonction   = cv2.bitwise_and(bord_rouge, bord_blanc)             # Zone de chevauchement = frontiere
 
