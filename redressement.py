@@ -38,7 +38,7 @@ def detecter_pastilles(img, nom="image"):
     else:                        tailles_kernel = [5,  3, 7]
 
     # Plages HSV testées en cascade, de la plus stricte à la plus permissive
-    plages_hsv = [ '''lo,hi'''
+    plages_hsv = [
         ([40, 100, 100], [80, 255, 255]),   # vert vif
         ([35,  60,  80], [90, 255, 255]),   # vert standard
         ([35,  40,  80], [95, 255, 255]),   # vert sombre / délavé

@@ -38,18 +38,23 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/base.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/basse.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/blanc.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/rouge.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/max.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/min.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/nuit.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/reflet.png"#RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests/vrai2.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/base.png"  #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/basse.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/blanc.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/rouge.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/max.png"   #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/min.png"   #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/nuit.png"  #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/reflet.png"#RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai1.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai2.png" #RAPPORT
+
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
+IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif2.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif3.png" #RAPPORT
+#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif4.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -74,7 +79,8 @@ cv2.imshow("Etape 1 : Photographie/Image de base", img)		#RAPPORT
 
 
 # ─── REDRESSEMENT ────────────────────────────────────────────────────────────────────
-img_ref = cv2.imread("indicateur1_pastilles.jpg") 		#Image de reference pour la position des pastilles en position de face
+#img_ref = cv2.imread("indicateur1_pastilles.jpg") 		#Image de reference pour la position des pastilles en position de face (dessus)
+img_ref = cv2.imread("/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/ref_vrf.png") 		#Image de reference pour la position des pastilles en position de face (sur feuille)
 img_ref = redimensionner_si_trop_grande(img_ref, largeur_max=500) 		#Redimensionner car sinon image trop lourde à traiter
 
 # Détection des points avec vos fonctions importées (fonction de redressement.py)
