@@ -92,7 +92,8 @@ def detecter_pastilles(img, nom="image"):
         cv2.imshow(f"Debug masque   - {nom}", cv2.resize(meilleur_masque, (int(w*scale), int(h*scale))))       #RAPPORT
         cv2.waitKey(0)      #RAPPORT
         cv2.destroyAllWindows()
-    sys.exit(1)
+    #sys.exit(1)
+    exit()
 #─────────────────────────────────────────────────────────────────────────────────────
 
 

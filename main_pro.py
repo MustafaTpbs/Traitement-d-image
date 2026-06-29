@@ -3,23 +3,18 @@ import cv2	#Traitement d'image en temps réel.
 import numpy as np	#Fonctions mathématiques sur des matrices/tableaux de données.
 from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande	#Deuxième fichier .py du projet.
 from picamzero import Camera	#Fonctions de la caméra de la raspberry.
-import time		#Fonction de temps. #RAPPORT
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
 #─── PRISE DE PHOTO ──────────────────────────────────────────────────────────────────
 cam = Camera()	#Initialisation de ma variable caméra.
 cam.still_size = (1280, 960)	#Résolution plus élevée pour plus de détails.
-cam.preview_size = (640, 480)	#Résolution de la caméra lors de la démonstration/aperçu. #RAPPORT
 
 #Paramètres anti-reflet
 cam.brightness = 0.0	#Pas de surexposition artificielle à la luminosité [-1 => 1]
 cam.white_balance = "auto"	#Peut être 'daylight' si la photo est prise en journée. 'Auto' pour plus de robustesse.
 
-cam.start_preview() 	#Lance la visualisation/l'apeçu sur l'écran du PC #RAPPORT
-time.sleep(2.0) 	#2s de stabilisation = moins de reflets 'chauds' #RAPPORT
 cam.take_photo("/home/raspberry/Projet Indicateur EDF/image.jpg")	#Prend la photo et enrigistre à l'adresse voulu
-cam.stop_preview()		#Met fin à l'aperçu #RAPPORT
 
 #Post-traitement anti-reflet
 img_brute = cv2.imread("/home/raspberry/Projet Indicateur EDF/image.jpg")	#Lit l'image à traiter et la stocke dans une variable
@@ -40,22 +35,6 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 #─── Variables importantes ────────────────────────────────────────────────────────────
 IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/base.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/basse.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/blanc.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/rouge.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/max.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/min.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/nuit.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/reflet.png"#RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai2.png" #RAPPORT
-
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif2.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif3.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif4.png" #RAPPORT
-
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
 
@@ -74,7 +53,6 @@ if img is None:
 
 #Utilisation de la fonction écrite dans le fichier redressement.py
 img = redimensionner_si_trop_grande(img, largeur_max=500) 	#Redimensionner permet de faciliter le traitement car sinon image trop lourde à traiter
-cv2.imshow("Etape 1 : Photographie/Image de base", img)		#RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -95,7 +73,6 @@ M = cv2.getPerspectiveTransform(src, dst) 	#Calcule la matrice de transformation
 # Application du redressement sur 'img'
 h, w = img_ref.shape[:2] 	#Récupère la forme de l'image référence, cela permet de 'zoomer' indirectement sur l'iamge principale
 img = cv2.warpPerspective(img, M, (w, h)) 	#Applique la matrice calculé sur toute l'image, voir : theailearner.com/tag/cv2-getperspectivetransform/
-cv2.imshow("Etape 2 : Image redressee", img) #RAPPORT
 
 # Copie propre sur laquelle les annotations seront fait à la fin
 img_resultat = img.copy()
@@ -105,7 +82,6 @@ img_resultat = img.copy()
 # ─── DETECTION DU CERCLE ─────────────────────────────────────────────────────────────
 gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Conversion en niveaux de gris, necessaire pour HoughCircles car la méthode ne fonctionne pas s'il y a des couleurs
 gris_floute = cv2.GaussianBlur(gris, (9, 9), 0) # Floute légèrement pour que la détection de cercle soit plus robuste, enlève le bruit autours des contours (fait une moyenne de la couleur des 9 pixels voisin pour chaque pixel)
-cv2.imshow("Etape 3 : Image gris et flou", gris_floute)  #RAPPORT
 
 '''     --Transformee de Hough--
 ==> Detecte les cercles dans l'image
@@ -129,7 +105,6 @@ print(f"Cadran detecte => centre : ({cx}, {cy}), rayon : {rayon}px")
 ==> Sert a ignorer tout ce qui est en dehors du cadran dans les etapes suivantes'''
 masque_cercle = np.zeros(img.shape[:2], dtype=np.uint8)     # Image noire de meme taille que la photo
 cv2.circle(masque_cercle, (cx, cy), rayon, 255, -1)         # -1 = remplissage complet par du blanc du disque
-cv2.imshow("Etape 4 : Masque cadran", masque_cercle)  #RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -150,7 +125,6 @@ points_arc = np.array([
 
 # Construit le polygone du secteur = centre + tous les points de l arc
 cv2.fillPoly(masque_secteur, [np.vstack([[cx, cy], points_arc])], 255) 		# fillPoly remplit ce polygone en blanc dans le masque
-cv2.imshow("Etape 5 : Masque zone utile", masque_secteur)  	#RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -180,9 +154,6 @@ nb_b = cv2.countNonZero(masque_blanc)
 print(f"[DIAG] masque_rouge={nb_r}px  masque_blanc={nb_b}px")
 if nb_r < 200:
     print("[DIAG] ATTENTION : rouge trop peu détecté — vérifier la photo")
-
-cv2.imshow("Etape 6 : Le rouge de la zone utile", masque_rouge) #RAPPORT
-cv2.imshow("Etape 7 : Le blanc de la zone utile", masque_blanc) #RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -202,7 +173,6 @@ contours_img = cv2.Canny(gris, 30, 100) 	#30 = seuil bas (bords faibles acceptes
 
 # Garde uniquement les bords situes dans la zone de jonction rouge/blanc
 contour_frontiere = cv2.bitwise_and(contours_img, jonction)
-cv2.imshow("Etape 8 : Contour frontiere rouge/blanc => 'aguille'", contour_frontiere)  	#RAPPORT
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -266,17 +236,17 @@ for seg in segments:
 if candidats_normaux:
     candidats_normaux.sort(key=lambda x: x[0])
     meilleur_segment = candidats_normaux[0][1]
-    print(f"[DIAG] Frontière normale à {candidats_normaux[0][2]:.0f}°") 	
+    print(f"Frontière normale à {candidats_normaux[0][2]:.0f}°") 
     
 #Priorité 2 : si aucun candidat normal → l'aiguille est vraiment à MIN ou MAX
 elif candidats_bord:
     candidats_bord.sort(key=lambda x: x[0])
     meilleur_segment = candidats_bord[0][1]
-    print(f"[DIAG] Fallback bord MIN/MAX : aiguille à l'extrémité ({candidats_bord[0][2]:.0f}°)") 	
+    print(f"Frontière bord MIN/MAX : aiguille à l'extrémité ({candidats_bord[0][2]:.0f}°)") 
 else:
 #Dernier recours : segment le plus proche du centre sans aucun filtre
     meilleur_segment = min(segments, key=lambda s: score_segment(s[0], cx, cy)[0])[0]
-    print("[DIAG] Fallback global") 	
+    print("Frontière global") 
 
 x1, y1, x2, y2 = meilleur_segment
 print(f"Segment frontiere : ({x1},{y1}) -> ({x2},{y2})")	
@@ -305,65 +275,3 @@ print(f"Ratio : {ratio:.2%}  =>  Valeur : {valeur_numerisee:.1f}")
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
-# ─── DESSIN DES ANNOTATIONS - RAPPORT ────────────────────────────────────────────────
-# Surbrillance semi-transparente sur les pixels detectes comme rouges
-overlay = img_resultat.copy()
-overlay[masque_rouge > 0] = [0, 0, 200]
-img_resultat = cv2.addWeighted(overlay, 0.3, img_resultat, 0.7, 0)		#addWeighted melange overlay (30%) et img_resultat (70%)
-
-# Cercle vert sur le contour du cadran detecte
-cv2.circle(img_resultat, (cx, cy), rayon, (0, 200, 0), 1)
-
-# Arc orange sur le bord du cercle pour visualiser le secteur de recherche
-for i in range(len(angles_arc) - 1):
-    p1 = (int(cx + rayon * np.cos(angles_arc[i])),   int(cy - rayon * np.sin(angles_arc[i])))
-    p2 = (int(cx + rayon * np.cos(angles_arc[i+1])), int(cy - rayon * np.sin(angles_arc[i+1])))
-    cv2.line(img_resultat, p1, p2, (0, 200, 255), 2)
-
-# Graduations de 10 en 10 sur l arc de l echelle physique
-valeurs_grad = range(int(VALEUR_MIN), int(VALEUR_MAX) + 1, 10)
-for val in valeurs_grad:
-    t     = (val - VALEUR_MIN) / (VALEUR_MAX - VALEUR_MIN)         # Position normalisee 0->1
-    angle = angle_min_rad + t * (angle_max_rad - angle_min_rad)    # Angle correspondant en radians
-
-    px_ext = int(cx + rayon        * np.cos(angle))    # Point sur le bord du cercle
-    py_ext = int(cy - rayon        * np.sin(angle))
-    px_int = int(cx + (rayon - 12) * np.cos(angle))    # Point en retrait de 12px pour le tiret
-    py_int = int(cy - (rayon - 12) * np.sin(angle))
-    px_lbl = int(cx + (rayon + 16) * np.cos(angle))    # Point a l exterieur pour l etiquette
-    py_lbl = int(cy - (rayon + 16) * np.sin(angle))
-
-    cv2.line(img_resultat, (px_int, py_int), (px_ext, py_ext), (255, 220, 0), 1)
-    cv2.putText(img_resultat, f"{val:.0f}", (px_lbl - 10, py_lbl + 4),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 220, 0), 1)
-
-# Etiquettes MIN et MAX aux extremites de l echelle physique
-for label, angle_r in [("MIN", angle_min_rad), ("MAX", angle_max_rad)]:
-    px = int(cx + (rayon + 22) * np.cos(angle_r))
-    py = int(cy - (rayon + 22) * np.sin(angle_r))
-    cv2.putText(img_resultat, label, (px - 12, py + 4),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 200, 255), 1)
-
-# Ligne cyan du centre vers le bord representant la frontiere mesuree
-px_bord = int(cx + rayon * np.cos(angle_frontiere_rad))
-py_bord = int(cy - rayon * np.sin(angle_frontiere_rad))
-cv2.line(img_resultat, (cx, cy), (px_bord, py_bord), (0, 220, 220), 2)
-
-# Point blanc au centre du cadran
-cv2.circle(img_resultat, (cx, cy), 3, (255, 255, 255), -1)
-
-# Valeur numerisee au centre du cadran
-cv2.putText(img_resultat, f"Niveau : {valeur_numerisee:.1f}",
-            (cx + 10, cy ),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-#──────────────────────────────────────────────────────────────────────────────────────
-
-
-# ─── SAUVEGARDE ET AFFICHAGE - RAPPORT ───────────────────────────────────────────────
-cv2.imwrite("resultat_analyse.png", img_resultat)   # Sauvegarde l image annotee sur disque
-print("Image sauvegardee : resultat_analyse.png")
-
-cv2.imshow("Image finale : Analyse niveau huile", img_resultat)
-cv2.waitKey(0)          # Attend une touche clavier avant de fermer
-cv2.destroyAllWindows() # Ferme toutes les fenetres OpenCV
-#──────────────────────────────────────────────────────────────────────────────────────
