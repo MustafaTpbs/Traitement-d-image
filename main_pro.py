@@ -3,6 +3,7 @@ import cv2	#Traitement d'image en temps réel.
 import numpy as np	#Fonctions mathématiques sur des matrices/tableaux de données.
 from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande	#Deuxième fichier .py du projet.
 from picamzero import Camera	#Fonctions de la caméra de la raspberry.
+from digital_to_analog import valeur_vers_dac, envoyer_au_dac
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -33,7 +34,8 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -275,3 +277,6 @@ print(f"Ratio : {ratio:.2%}  =>  Valeur : {valeur_numerisee:.1f}")
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
+# ─── Envoie en niveau de tenstion ────────────────────────────────────────────────────
+envoyer_au_dac(valeur_numerisee, VALEUR_MIN, VALEUR_MAX)
+#──────────────────────────────────────────────────────────────────────────────────────

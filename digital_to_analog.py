@@ -3,7 +3,6 @@ Ce fichier est une bibliothèque de fonction écrite dans la cadre du projet de 
 Ces fonctions sont utilisés dans le programme principale 'main.py'
 '''
 
-
 #Vérifier : sudo raspi-config PUIS interface options PUIS I2C PUIS enable
 #Vérifier : i2cdetect -y 1 DOIT AFFICHER 62 ou 63
 
@@ -16,16 +15,13 @@ import adafruit_mcp4725         # Driver spécifique au composant MCP4725
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
-#─── Constantes importantes ──────────────────────────────────────────────────────────
+#─── Constante importante ──────────────────────────────────────────────────────────
 DAC_MAX = 4095		#Résolution du DAC 12 bits : 2^12 - 1 = 4095 
-
-VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
-VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
 # ─── Conversion de la valeur en donnée traitable ────────────────────────────────────
-def valeur_vers_dac(valeur: float) -> int:
+def valeur_vers_dac(valeur: float, VALEUR_MIN: float, VALEUR_MAX: float)->int:
     """
     Convertit une valeur physique (float) en code DAC 12 bits (int 0–4095)
     évite tout débordement hors plage
@@ -44,7 +40,7 @@ def valeur_vers_dac(valeur: float) -> int:
 
 
 # ─── Envoie de la valeur vers le DAC => NV de tension  ──────────────────────────────
-def envoyer_au_dac(valeur: float) -> None:
+def envoyer_au_dac(valeur: float, VALEUR_MIN : float, VALEUR_MAX : float) -> None:
     """
     Initialise le bus I2C, instancie le DAC et envoie la valeur convertie.
     """
@@ -52,11 +48,10 @@ def envoyer_au_dac(valeur: float) -> None:
     i2c = busio.I2C(board.SCL, board.SDA)
 
     # Instancie le driver MCP4725 sur l'adresse I2C 0x62
-    # (A0 relié à GND → 0x62 ; A0 relié à VCC → 0x63)
     dac = adafruit_mcp4725.MCP4725(i2c, address=0x62)
 
     # Convertit la valeur physique en code DAC 12 bits
-    code = valeur_vers_dac(valeur)
+    code = valeur_vers_dac(valeur,VALEUR_MIN, VALEUR_MAX)
 
     # Envoie le code au registre du DAC via I2C
     # Le composant convertit immédiatement ce code en tension sur VOUT

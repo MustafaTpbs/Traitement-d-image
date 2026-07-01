@@ -4,6 +4,9 @@ import numpy as np	#Fonctions mathématiques sur des matrices/tableaux de donné
 from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande	#Deuxième fichier .py du projet.
 from picamzero import Camera	#Fonctions de la caméra de la raspberry.
 import time		#Fonction de temps. #RAPPORT
+'''
+from digital_to_analog import valeur_vers_dac, envoyer_au_dac
+'''
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -38,7 +41,7 @@ cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauve
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/base.png"  #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/basse.png" #RAPPORT
@@ -51,7 +54,7 @@ IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai1.png" #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai2.png" #RAPPORT
 
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
+IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif2.png" #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif3.png" #RAPPORT
 #IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif4.png" #RAPPORT
@@ -358,6 +361,11 @@ cv2.putText(img_resultat, f"Niveau : {valeur_numerisee:.1f}",
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 #──────────────────────────────────────────────────────────────────────────────────────
 
+'''
+# ─── Envoie en niveau de tenstion ────────────────────────────────────────────────────
+envoyer_au_dac(valeur_numerisee, VALEUR_MIN, VALEUR_MAX)
+#──────────────────────────────────────────────────────────────────────────────────────
+'''
 
 # ─── SAUVEGARDE ET AFFICHAGE - RAPPORT ───────────────────────────────────────────────
 cv2.imwrite("resultat_analyse.png", img_resultat)   # Sauvegarde l image annotee sur disque
