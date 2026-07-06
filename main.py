@@ -4,9 +4,15 @@ import numpy as np	#Fonctions mathématiques sur des matrices/tableaux de donné
 from redressement import detecter_pastilles, trier_losange, redimensionner_si_trop_grande	#Deuxième fichier .py du projet.
 from picamzero import Camera	#Fonctions de la caméra de la raspberry.
 import time		#Fonction de temps. #RAPPORT
+from pathlib import Path
 '''
 from digital_to_analog import valeur_vers_dac, envoyer_au_dac
 '''
+#─────────────────────────────────────────────────────────────────────────────────────
+
+
+#─── Chemin du dossier ───────────────────────────────────────────────────────────────
+chemin = Path(__file__).resolve().parent
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -21,11 +27,11 @@ cam.white_balance = "auto"	#Peut être 'daylight' si la photo est prise en journ
 
 cam.start_preview() 	#Lance la visualisation/l'apeçu sur l'écran du PC #RAPPORT
 time.sleep(2.0) 	#2s de stabilisation = moins de reflets 'chauds' #RAPPORT
-cam.take_photo("/home/raspberry/Projet Indicateur EDF/image.jpg")	#Prend la photo et enrigistre à l'adresse voulu
+cam.take_photo(chemin/"image.jpg")	#Prend la photo et enrigistre à l'adresse voulu
 cam.stop_preview()		#Met fin à l'aperçu #RAPPORT
 
 #Post-traitement anti-reflet
-img_brute = cv2.imread("/home/raspberry/Projet Indicateur EDF/image.jpg")	#Lit l'image à traiter et la stocke dans une variable
+img_brute = cv2.imread(chemin/"image.jpg")	#Lit l'image à traiter et la stocke dans une variable
 
 gamma   = 1.3	#Correction : assombrit les hautes lumières sans toucher les foncés
 lut     = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)], dtype=np.uint8)		#Création d'une 'colormap' personalisé pour traiter les hautes lumières
@@ -36,28 +42,28 @@ clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) 	#voir : geeksforgee
 lab[:, :, 0] = clahe.apply(lab[:, :, 0]) 	#Correction : améliore le contraste local
 img_brute = cv2.cvtColor(lab, cv2.COLOR_Lab2BGR) 	#Re-conversion des couleurs post-traitement
 
-cv2.imwrite("/home/raspberry/Projet Indicateur EDF/image.jpg", img_brute)	#Sauvegarde l'image traité
+cv2.imwrite(chemin/"image.jpg", img_brute)	#Sauvegarde l'image traité
 #──────────────────────────────────────────────────────────────────────────────────────
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
 #IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/base.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/basse.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/blanc.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/rouge.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/max.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/min.png"   #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/nuit.png"  #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/reflet.png"#RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur indicateur/vrai2.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/base.png"  #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/basse.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/blanc.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/rouge.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/max.png"   #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/min.png"   #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/nuit.png"  #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/reflet.png"#RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/vrai1.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur indicateur/vrai2.png" #RAPPORT
 
-IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif1.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif2.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif3.png" #RAPPORT
-#IMAGE = "/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/test_vif4.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur feuille/test_vif1.png" #RAPPORT
+IMAGE = chemin/"tests pastilles sur feuille/test_vif2.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur feuille/test_vif3.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur feuille/test_vif4.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -83,7 +89,7 @@ cv2.imshow("Etape 1 : Photographie/Image de base", img)		#RAPPORT
 
 # ─── REDRESSEMENT ────────────────────────────────────────────────────────────────────
 #img_ref = cv2.imread("indicateur1_pastilles.jpg") 		#Image de reference pour la position des pastilles en position de face (dessus)
-img_ref = cv2.imread("/home/raspberry/Projet Indicateur EDF/tests pastilles sur feuille/ref_vrf.png") 		#Image de reference pour la position des pastilles en position de face (sur feuille)
+img_ref = cv2.imread(chemin/"tests pastilles sur feuille/ref_vrf.png") 		#Image de reference pour la position des pastilles en position de face (sur feuille)
 img_ref = redimensionner_si_trop_grande(img_ref, largeur_max=500) 		#Redimensionner car sinon image trop lourde à traiter
 
 # Détection des points avec vos fonctions importées (fonction de redressement.py)
