@@ -32,9 +32,9 @@ Description= Lancement automatique du script de traitement d'image de l'indicate
 After=network.target
 
 [Service]
+Type=oneshot
 ExecStart=/bin/bash $(pwd)/run.sh
 WorkingDirectory=$(pwd)
-Restart=always
 User=$(whoami)
 
 [Install]
