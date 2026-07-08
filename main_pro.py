@@ -40,8 +40,8 @@ cv2.imwrite(chemin/"image.jpg", img_brute)	#Sauvegarde l'image traité
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
-IMAGE = chemin/"tests pastilles sur feuille/test_vif1.png" #RAPPORT
+IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+#IMAGE = chemin/"tests pastilles sur feuille/test_vif2.png" #RAPPORT
 
 VALEUR_MIN = -35    # Valeur gravee sur le repere MIN du cadran [°C]
 VALEUR_MAX = 150    # Valeur MAX du cadran [°C]
@@ -57,7 +57,7 @@ ANGLE_MAX_DEG = 120.0 	#MAX est en haut => ~120 deg
 img = cv2.imread(IMAGE)
 if img is None:
     print(f"Erreur : impossible de charger '{IMAGE}'.")
-    exit()
+    exit(1)
 
 #Utilisation de la fonction écrite dans le fichier redressement.py
 img = redimensionner_si_trop_grande(img, largeur_max=500) 	#Redimensionner permet de faciliter le traitement car sinon image trop lourde à traiter
@@ -104,7 +104,7 @@ cercles = cv2.HoughCircles(gris_floute, cv2.HOUGH_GRADIENT,
     
 if cercles is None:
     print("Aucun cercle trouve. Ajuster les parametres de HoughCircles.")
-    exit()
+    exit(1)
 
 cx, cy, rayon = np.round(cercles[0][0]).astype(int) 	#cercles[0][0] = meilleur cercle detecte [x_centre, y_centre, rayon]
 print(f"Cadran detecte => centre : ({cx}, {cy}), rayon : {rayon}px")
@@ -197,7 +197,7 @@ segments = cv2.HoughLinesP(
  
 if segments is None:
     print("Aucun segment trouve. Verifier les masques rouge et blanc.")
-    exit()
+    exit(1)
 #──────────────────────────────────────────────────────────────────────────────────────
 
 

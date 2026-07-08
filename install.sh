@@ -32,10 +32,12 @@ Description= Lancement automatique du script de traitement d'image de l'indicate
 After=network.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/bin/bash $(pwd)/run.sh
 WorkingDirectory=$(pwd)
 User=$(whoami)
+Restart=on-failure
+RestartSec=2s
 
 [Install]
 WantedBy=multi-user.target

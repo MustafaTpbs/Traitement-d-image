@@ -93,7 +93,7 @@ def detecter_pastilles(img, nom="image"):
         cv2.waitKey(0)      #RAPPORT
         cv2.destroyAllWindows()
     #sys.exit(1)
-    exit()
+    exit(1)
 #─────────────────────────────────────────────────────────────────────────────────────
 
 

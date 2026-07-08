@@ -47,7 +47,7 @@ cv2.imwrite(chemin/"image.jpg", img_brute)	#Sauvegarde l'image traité
 
 
 #─── Variables importantes ────────────────────────────────────────────────────────────
-#IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
+IMAGE = "image.jpg" 	#Photographie qui va être utilisé par la suite
 
 #IMAGE = chemin/"tests pastilles sur indicateur/base.png"  #RAPPORT
 #IMAGE = chemin/"tests pastilles sur indicateur/basse.png" #RAPPORT
@@ -61,7 +61,7 @@ cv2.imwrite(chemin/"image.jpg", img_brute)	#Sauvegarde l'image traité
 #IMAGE = chemin/"tests pastilles sur indicateur/vrai2.png" #RAPPORT
 
 #IMAGE = chemin/"tests pastilles sur feuille/test_vif1.png" #RAPPORT
-IMAGE = chemin/"tests pastilles sur feuille/test_vif2.png" #RAPPORT
+#IMAGE = chemin/"tests pastilles sur feuille/test_vif2.png" #RAPPORT
 #IMAGE = chemin/"tests pastilles sur feuille/test_vif3.png" #RAPPORT
 #IMAGE = chemin/"tests pastilles sur feuille/test_vif4.png" #RAPPORT
 
