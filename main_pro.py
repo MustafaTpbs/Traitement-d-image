@@ -220,7 +220,7 @@ def score_segment(seg, cx, cy):
     return score, a_seg, longueur, dist_centre
 
 
-MARGE_BORD = 5.0    
+MARGE_BORD = 15.0    
 
 # Séparer les segments "bord de masque" (angle ≈ MIN ou MAX) des vrais candidats
 candidats_normaux = []
