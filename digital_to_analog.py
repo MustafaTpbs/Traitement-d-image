@@ -1,10 +1,10 @@
 '''
 Ce fichier est une bibliothèque de fonction écrite dans la cadre du projet de traitement d'image d'un indicateur de niveau d'huile. 
-Ces fonctions sont utilisés dans le programme principale 'main.py'
+Ces fonctions sont utilisés dans le programme principale 'main_pro.py'
 '''
 
 #Vérifier : sudo raspi-config PUIS interface options PUIS I2C PUIS enable
-#Vérifier : i2cdetect -y 1 DOIT AFFICHER 62 ou 63
+#Vérifier : i2cdetect -y 1 DOIT AFFICHER 60 ou 61
 
 
 # ─── LIBRAIRIES ─────────────────────────────────────────────────────────────────────
@@ -47,8 +47,8 @@ def envoyer_au_dac(valeur: float, VALEUR_MIN : float, VALEUR_MAX : float) -> Non
     # Crée le bus I2C en utilisant les broches SCL/SDA par défaut du Pi (GPIO3/GPIO2)
     i2c = busio.I2C(board.SCL, board.SDA)
 
-    # Instancie le driver MCP4725 sur l'adresse I2C 0x62
-    dac = adafruit_mcp4725.MCP4725(i2c, address=0x62)
+    # Instancie le driver MCP4725 sur l'adresse I2C 0x60
+    dac = adafruit_mcp4725.MCP4725(i2c, address=0x60)
 
     # Convertit la valeur physique en code DAC 12 bits
     code = valeur_vers_dac(valeur,VALEUR_MIN, VALEUR_MAX)

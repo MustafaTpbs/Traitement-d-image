@@ -1,10 +1,11 @@
 '''
 Ce fichier est une bibliothèque de fonction écrite dans la cadre du projet de traitement d'image d'un indicateur de niveau d'huile. 
-Ces fonctions sont utilisés dans le programme principale 'main.py'
+Ces fonctions sont utilisés dans le programme principale 'main_pro.py'
 '''
 # ─── LIBRAIRIES ─────────────────────────────────────────────────────────────────────
 import cv2  #Traitement d'image en temps réel.
 import numpy as np  #Fonctions mathématiques sur des matrices/tableaux de données.
+from digital_to_analog import envoyer_au_dac
 #─────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -82,6 +83,7 @@ def detecter_pastilles(img, nom="image"):
 
     # Echec : afficher le debug et quitter
     print(f"[ERREUR] {len(meilleurs_pts)} pastille(s) trouvée(s) dans '{nom}' (4 attendues).")
+    envoyer_au_dac(-35, -35, 150)
     print("  → Vérifier l'éclairage, la couleur des pastilles ou les paramètres HSV.")
     if meilleur_masque is not None:   #RAPPORT
         debug = img.copy()   #RAPPORT
