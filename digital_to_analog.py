@@ -34,7 +34,7 @@ def valeur_vers_dac(valeur: float, VALEUR_MIN: float, VALEUR_MAX: float)->int:
 
     # Calcule le code entier correspondant et l'arrondit
     code_dac = int(round(ratio * DAC_MAX))
-
+    
     return code_dac
 #─────────────────────────────────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ def envoyer_au_dac(valeur: float, VALEUR_MIN : float, VALEUR_MAX : float) -> Non
 
     # Envoie le code au registre du DAC via I2C
     # Le composant convertit immédiatement ce code en tension sur VOUT
-    dac.value = code
+    dac.raw_value = code
 
     # Calcul de la tension théorique en sortie pour le log (VCC = 3.3 V)
     tension_sortie = (code / DAC_MAX) * 3.3
