@@ -90,8 +90,8 @@ def detecter_pastilles(img, nom="image"):
         for pt in meilleurs_pts:   #RAPPORT
             cv2.circle(debug, (int(pt[0]), int(pt[1])), 20, (0, 0, 255), -1)   #RAPPORT
         scale = 900 / max(w, h)   #RAPPORT
-        cv2.imshow(f"Debug pastilles - {nom}", cv2.resize(debug, (int(w*scale), int(h*scale))))     #RAPPORT
-        cv2.imshow(f"Debug masque   - {nom}", cv2.resize(meilleur_masque, (int(w*scale), int(h*scale))))       #RAPPORT
+        #cv2.imshow(f"Debug pastilles - {nom}", cv2.resize(debug, (int(w*scale), int(h*scale))))     #RAPPORT
+        #cv2.imshow(f"Debug masque   - {nom}", cv2.resize(meilleur_masque, (int(w*scale), int(h*scale))))       #RAPPORT
         cv2.waitKey(0)      #RAPPORT
         cv2.destroyAllWindows()
     #sys.exit(1)

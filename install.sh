@@ -51,5 +51,13 @@ sudo systemctl start mon_service.service
 echo "--- Installation et activation du lancement automatique terminées ---"
 
 
+echo "--- Étape 5 (optionnelle) : Environnement de debug avec fenêtres graphiques ---"
+sudo apt install -y python3-opencv python3-numpy python3-picamera2
+python3 -m venv --system-site-packages .venv-debug
+./.venv-debug/bin/pip install --upgrade pip
+./.venv-debug/bin/pip install picamzero==1.0.2 --no-deps
+./.venv-debug/bin/pip install adafruit-circuitpython-mcp4725
+echo "--- Environnement de debug prêt (.venv-debug) ---"
+
 
 echo "--- Installation terminée ---"
