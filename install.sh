@@ -11,6 +11,62 @@ sudo raspi-config nonint do_i2c 0
 
 
 
+echo "--- Étape 1bis : Installation Witty Pi 4 (RTC + alimentation) ---" 
+sudo apt install -y git build-essential i2c-tools 
+
+# wiringPi (retiré des dépôts apt depuis Bookworm, fork officiel maintenu) 
+if [ ! -d "/home/raspberry/WiringPi" ]; then 
+	cd /home/raspberry 
+	git clone https://github.com/WiringPi/WiringPi.git 
+	cd WiringPi 
+	./build 
+else 
+	echo  "WiringPi déjà présent, on passe." 
+	
+fi 
+gpio -v 
+
+# Witty Pi 4 (installe dans /home/raspberry/wittypi) 
+if [ ! -d "/home/raspberry/wittypi" ]; then 
+	cd /home/raspberry 
+	wget https://www.uugear.com/repo/WittyPi4/install.sh -O wittypi_install.sh 
+	yes | sudo bash wittypi_install.sh 
+else 
+	echo "Witty Pi déjà installée, on passe." 
+fi 
+
+# Synchronise l'heure système actuelle (bonne, car on est encore en ligne ici) vers la RTC 
+cd /home/raspberry/wittypi 
+. ./utilities.sh
+system_to_rtc 
+rtc_to_system 
+date
+
+
+'''
+echo "--- Étape 1ter : Marge de sécurité + réveil quotidien Witty Pi ---"
+cd /home/raspberry/wittypi
+. ./utilities.sh
+i2c_write ${I2C_BUS} $I2C_MC_ADDRESS $I2C_CONF_POWER_CUT_DELAY 250
+
+WAKE_TIME="15:25"
+WORK_MINUTES=15
+OFF_MINUTES=$((24*60 - WORK_MINUTES))
+OFF_H=$((OFF_MINUTES / 60))
+OFF_M=$((OFF_MINUTES % 60))
+BEGIN_DATE=$(date +%Y-%m-%d)
+
+cat > /home/raspberry/wittypi/schedule.wpi <<EOF
+BEGIN ${BEGIN_DATE} ${WAKE_TIME}:00
+END 2035-12-31 23:59:59
+ON M${WORK_MINUTES}
+OFF H${OFF_H} M${OFF_M}
+EOF
+
+./runScript.sh
+'''
+
+
 echo "--- Étape 2 : Création de l'environnement virtuel ---"
 # Elle permet au venv de voir les paquets installés par 'apt' (comme libcamera)
 python3 -m venv --system-site-packages .venv
