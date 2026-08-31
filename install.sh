@@ -2,6 +2,8 @@
 set -e
 
 
+PROJECT_DIR="$(pwd)"
+
 
 echo "--- Étape 1 : Installation des dépendances système ---"
 sudo apt update
@@ -43,18 +45,18 @@ rtc_to_system
 date
 
 
-'''
+
 echo "--- Étape 1ter : Marge de sécurité + réveil quotidien Witty Pi ---"
 cd /home/raspberry/wittypi
 . ./utilities.sh
 i2c_write ${I2C_BUS} $I2C_MC_ADDRESS $I2C_CONF_POWER_CUT_DELAY 250
 
-WAKE_TIME="15:25"
-WORK_MINUTES=15
+WAKE_TIME="10:20"
+WORK_MINUTES=5
 OFF_MINUTES=$((24*60 - WORK_MINUTES))
 OFF_H=$((OFF_MINUTES / 60))
 OFF_M=$((OFF_MINUTES % 60))
-BEGIN_DATE=$(date +%Y-%m-%d)
+BEGIN_DATE=$(date -d "yesterday" +%Y-%m-%d)
 
 cat > /home/raspberry/wittypi/schedule.wpi <<EOF
 BEGIN ${BEGIN_DATE} ${WAKE_TIME}:00
@@ -64,7 +66,25 @@ OFF H${OFF_H} M${OFF_M}
 EOF
 
 ./runScript.sh
-'''
+
+# Correction du décalage de sécurité de Witty Pi (documenté) :
+# runScript.sh peut repousser le premier réveil d'un cycle complet
+# si le script tourne pendant que le Pi est déjà allumé hors de la fenêtre ON.
+# On force donc explicitement la vraie prochaine occurrence de WAKE_TIME.
+NOW_SEC=$(date +%s)
+TODAY_TARGET=$(date -d "today ${WAKE_TIME}" +%s)
+if [ "$TODAY_TARGET" -gt "$NOW_SEC" ]; then
+    TARGET_TS=$TODAY_TARGET
+else
+    TARGET_TS=$(date -d "tomorrow ${WAKE_TIME}" +%s)
+fi
+TARGET_DAY=$(date -d @$TARGET_TS +%d)
+TARGET_HOUR=$(date -d @$TARGET_TS +%H)
+TARGET_MIN=$(date -d @$TARGET_TS +%M)
+set_startup_time $TARGET_DAY $TARGET_HOUR $TARGET_MIN 0
+echo "Prochain réveil forcé à : jour ${TARGET_DAY}, ${TARGET_HOUR}:${TARGET_MIN}"
+
+cd "$PROJECT_DIR"
 
 
 echo "--- Étape 2 : Création de l'environnement virtuel ---"
