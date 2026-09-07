@@ -66,6 +66,8 @@ OFF H${OFF_H} M${OFF_M}
 EOF
 
 ./runScript.sh
+i2c_write ${I2C_BUS} $I2C_MC_ADDRESS $I2C_CONF_DUMMY_LOAD 254 #Pulsion/4s pour tenir batterie allumée
+i2c_write ${I2C_BUS} $I2C_MC_ADDRESS $I2C_CONF_PULSE_INTERVAL 1 #Pulsion/4s pour tenir batterie allumée
 
 # Correction du décalage de sécurité de Witty Pi (documenté) :
 # runScript.sh peut repousser le premier réveil d'un cycle complet
